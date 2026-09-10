@@ -1,9 +1,15 @@
+// ============================================================
+// SHARE - Partage de position GPS
+// Version corrigée avec la bonne URL backend
+// ============================================================
+
 const BACKEND_URL = 'https://localisation-backend-sm3t.onrender.com';
 
 let sharing = false;
 let intervalId = null;
 let userId = null;
 let permissionGranted = false;
+let backendAwake = false;
 
 function generateUserId() {
     return 'user_' + Math.random().toString(36).substring(2, 10);
@@ -16,64 +22,71 @@ function updateStatus(msg, type = '') {
 }
 
 // ============================================================
-// DEMANDER LA PERMISSION DÈS LE CHARGEMENT
+// RÉVEIL DU BACKEND
 // ============================================================
-async function requestPermission() {
-    if (!navigator.geolocation) {
-        updateStatus('❌ Géolocalisation non supportée', 'error');
-        return false;
-    }
-    
-    // Vérifier la permission actuelle
-    if (navigator.permissions) {
-        try {
-            const result = await navigator.permissions.query({ name: 'geolocation' });
-            
-            if (result.state === 'granted') {
-                permissionGranted = true;
-                updateStatus('✅ Localisation activée. Entrez votre prénom.', 'active');
-                return true;
-            } else if (result.state === 'denied') {
-                updateStatus('❌ Localisation refusée. Activez-la dans les paramètres.', 'error');
-                return false;
-            }
-        } catch (e) {
-            // Ignorer
-        }
-    }
-    
-    // Tenter d'obtenir la position immédiatement
+async function wakeBackend() {
     try {
-        const pos = await getPosition();
-        permissionGranted = true;
-        updateStatus('✅ Localisation activée. Entrez votre prénom.', 'active');
-        return true;
+        updateStatus('🔄 Connexion au serveur...', '');
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 90000);
+        
+        const response = await fetch(BACKEND_URL + '/api/ping', {
+            signal: controller.signal,
+            method: 'GET'
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (response.ok) {
+            backendAwake = true;
+            updateStatus('✅ Serveur connecté. Entrez votre prénom.', 'active');
+            return true;
+        } else {
+            updateStatus('⚠️ Serveur indisponible. Réessayez.', 'error');
+            return false;
+        }
     } catch (e) {
-        updateStatus('⚠️ Veuillez autoriser la localisation.', 'error');
+        console.error('Erreur wakeBackend:', e);
+        updateStatus('⚠️ Serveur en cours de réveil. Patientez 30 sec.', '');
         return false;
     }
 }
 
+// ============================================================
+// GÉOLOCALISATION
+// ============================================================
 function getPosition() {
     return new Promise((resolve, reject) => {
         if (!navigator.geolocation) {
             reject(new Error('Géolocalisation non supportée'));
             return;
         }
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0
-        });
+        navigator.geolocation.getCurrentPosition(
+            resolve,
+            (err) => reject(new Error('Localisation refusée: ' + err.message)),
+            {
+                enableHighAccuracy: true,
+                timeout: 20000,
+                maximumAge: 0
+            }
+        );
     });
 }
 
+// ============================================================
+// ENVOI DE LA POSITION
+// ============================================================
 async function sendPosition() {
     const name = document.getElementById('name').value.trim();
     if (!name) return;
 
     try {
         const pos = await getPosition();
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 90000);
+        
         const response = await fetch(BACKEND_URL + '/api/position', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -82,32 +95,51 @@ async function sendPosition() {
                 name: name,
                 lat: pos.coords.latitude,
                 lng: pos.coords.longitude
-            })
+            }),
+            signal: controller.signal
         });
+        
+        clearTimeout(timeoutId);
+        
         const data = await response.json();
         if (data.status === 'ok') {
             updateStatus(`✅ Position envoyée (${new Date().toLocaleTimeString()})`, 'active');
+        } else {
+            updateStatus('⚠️ Erreur serveur: ' + (data.error || 'inconnue'), 'error');
         }
     } catch (e) {
-        updateStatus('❌ Erreur: ' + e.message, 'error');
+        console.error('Erreur sendPosition:', e);
+        
+        if (e.name === 'AbortError') {
+            updateStatus('⚠️ Timeout. Le serveur est lent.', 'error');
+        } else {
+            updateStatus('❌ Erreur: ' + e.message, 'error');
+        }
     }
 }
 
+// ============================================================
+// DÉMARRER / ARRÊTER LE PARTAGE
+// ============================================================
 async function toggleSharing() {
     const name = document.getElementById('name').value.trim();
     const btn = document.getElementById('shareBtn');
     const btnText = document.getElementById('btnText');
 
     if (!sharing) {
+        // DÉMARRER
         if (!name) {
             updateStatus('⚠️ Entrez votre prénom', 'error');
             return;
         }
         
-        // Demander la permission si pas encore fait
-        if (!permissionGranted) {
-            const granted = await requestPermission();
-            if (!granted) return;
+        // Réveiller le backend si nécessaire
+        if (!backendAwake) {
+            const awake = await wakeBackend();
+            if (!awake) {
+                updateStatus('⚠️ Serveur en réveil. Réessayez dans 30 sec.', 'error');
+                return;
+            }
         }
         
         sharing = true;
@@ -122,13 +154,20 @@ async function toggleSharing() {
         intervalId = setInterval(sendPosition, 3000);
         
     } else {
+        // ARRÊTER
         sharing = false;
-        if (intervalId) clearInterval(intervalId);
+        
+        if (intervalId) {
+            clearInterval(intervalId);
+            intervalId = null;
+        }
+        
         btn.classList.remove('stop');
         btnText.textContent = 'Partager ma position';
         
         if (userId) {
-            fetch(BACKEND_URL + '/api/position/' + userId, { method: 'DELETE' });
+            fetch(BACKEND_URL + '/api/position/' + userId, { method: 'DELETE' })
+                .catch(() => {});
         }
         
         updateStatus('Partage arrêté');
@@ -136,10 +175,11 @@ async function toggleSharing() {
 }
 
 // ============================================================
-// DEMANDER LA PERMISSION DÈS LE CHARGEMENT
+// AU CHARGEMENT
 // ============================================================
 window.addEventListener('load', function() {
-    setTimeout(requestPermission, 500);
+    // Réveiller le backend automatiquement
+    wakeBackend();
 });
 
 // Prévenir si on quitte la page
