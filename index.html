@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Partager ma position</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>📍 Partager ma position</h1>
+        <p class="subtitle">Votre position sera partagée en direct</p>
+
+        <div class="form-group">
+            <label>Votre prénom</label>
+            <input type="text" id="name" placeholder="Ex: Jean" maxlength="30">
+        </div>
+
+        <button class="btn" id="shareBtn" onclick="toggleSharing()">
+            <i class="fas fa-map-marker-alt"></i>
+            <span id="btnText">Partager ma position</span>
+        </button>
+
+        <div class="status" id="status">Prêt à partager</div>
+
+        <p class="info">🔒 Votre position n'est visible que par l'administrateur</p>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
