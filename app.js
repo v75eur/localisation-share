@@ -2,7 +2,7 @@
 // SHARE - Envoi position toutes les 3 SECONDES
 // ============================================================
 const BACKEND_URL = 'https://localisation-backend-sm3t.onrender.com';
-const SEND_INTERVAL = 3000;
+const SEND_INTERVAL = 2000;
 
 let sharing = false;
 let intervalId = null;
