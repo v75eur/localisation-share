@@ -1,4 +1,8 @@
+// ============================================================
+// SHARE - Envoi position toutes les 3 SECONDES
+// ============================================================
 const BACKEND_URL = 'https://localisation-backend-sm3t.onrender.com';
+const SEND_INTERVAL = 3000; // 3 SECONDES
 
 let sharing = false;
 let intervalId = null;
@@ -16,13 +20,14 @@ function updateStatus(msg, type = '') {
     if (s) { s.textContent = msg; s.className = 'status ' + type; }
 }
 
+// Wake Lock
 async function requestWakeLock() {
     try {
         if ('wakeLock' in navigator) {
             wakeLock = await navigator.wakeLock.request('screen');
             console.log('✅ Wake Lock ON');
         }
-    } catch (e) { console.warn('Wake Lock:', e); }
+    } catch (e) {}
 }
 function releaseWakeLock() {
     if (wakeLock) { wakeLock.release(); wakeLock = null; }
@@ -56,7 +61,9 @@ function getPosition() {
     return new Promise((resolve, reject) => {
         if (!navigator.geolocation) { reject(new Error('Non supportée')); return; }
         navigator.geolocation.getCurrentPosition(resolve, reject, {
-            enableHighAccuracy: true, timeout: 20000, maximumAge: 0
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 0
         });
     });
 }
@@ -73,7 +80,8 @@ async function sendPosition() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 user_id: userId, name: name,
-                lat: pos.coords.latitude, lng: pos.coords.longitude,
+                lat: pos.coords.latitude,
+                lng: pos.coords.longitude,
                 speed: pos.coords.speed || 0,
                 accuracy: pos.coords.accuracy || 0,
                 heading: pos.coords.heading || 0,
@@ -85,7 +93,7 @@ async function sendPosition() {
         const data = await r.json();
         if (data.status === 'ok') {
             backendAwake = true;
-            updateStatus(`✅ Envoyé (${new Date().toLocaleTimeString()})`, 'active');
+            updateStatus(`✅ Envoyé (${new Date().toLocaleTimeString()}) ±${Math.round(pos.coords.accuracy)}m`, 'active');
         }
     } catch (e) {
         updateStatus('⚠️ Reconnexion...', '');
@@ -110,7 +118,7 @@ async function toggleSharing() {
         btnText.textContent = 'Arrêter le partage';
         await requestWakeLock();
         await sendPosition();
-        intervalId = setInterval(sendPosition, 3000);
+        intervalId = setInterval(sendPosition, SEND_INTERVAL); // 3 SECONDES
         pingId = setInterval(() => fetch(BACKEND_URL + '/api/ping').catch(() => {}), 10000);
     } else {
         sharing = false;
