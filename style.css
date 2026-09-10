@@ -1,15 +1,18 @@
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Inter',sans-serif;background:#050508;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1.5rem}
-.container{max-width:420px;width:100%;background:rgba(255,255,255,.02);border:1px solid rgba(0,212,255,.15);border-radius:20px;padding:2rem;text-align:center}
+.container{max-width:440px;width:100%;background:rgba(255,255,255,.02);border:1px solid rgba(0,212,255,.15);border-radius:20px;padding:2rem;text-align:center}
 h1{font-size:1.5rem;margin-bottom:.5rem;background:linear-gradient(135deg,#00d4ff,#7b2ffc);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .subtitle{color:rgba(255,255,255,.5);font-size:.9rem;margin-bottom:1.5rem}
 .form-group{margin-bottom:1rem;text-align:left}
 label{display:block;font-size:.8rem;color:rgba(255,255,255,.5);margin-bottom:.3rem}
-input{width:100%;padding:.8rem 1rem;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;color:#fff;font-size:.95rem;font-family:inherit}
+input{width:100%;padding:.8rem 1rem;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;color:#fff;font-size:.95rem}
 input:focus{outline:0;border-color:rgba(0,212,255,.4)}
 .btn{width:100%;padding:1rem;background:linear-gradient(135deg,#00d4ff,#7b2ffc);border:0;border-radius:12px;color:#fff;font-weight:700;font-size:1rem;cursor:pointer;margin-top:1rem;display:flex;align-items:center;justify-content:center;gap:.5rem}
 .btn.stop{background:linear-gradient(135deg,#ff5f57,#ff8c00)}
 .status{margin-top:1.5rem;padding:1rem;background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.15);border-radius:12px;font-size:.85rem;color:rgba(255,255,255,.7)}
 .status.active{background:rgba(40,200,64,.06);border-color:rgba(40,200,64,.2);color:#28c840}
 .status.error{background:rgba(255,95,87,.06);border-color:rgba(255,95,87,.2);color:#ff5f57}
-.info{font-size:.75rem;color:rgba(255,255,255,.3);margin-top:1rem}
+.info-box{margin-top:1.5rem;padding:1rem;background:rgba(255,215,0,.04);border:1px solid rgba(255,215,0,.1);border-radius:12px;text-align:left}
+.info-box p{font-size:.75rem;color:rgba(255,255,255,.5);line-height:1.5;margin-bottom:.5rem;display:flex;gap:.5rem}
+.info-box p:last-child{margin-bottom:0}
+.info-box i{color:#ffd700;margin-top:.2rem;flex-shrink:0}
