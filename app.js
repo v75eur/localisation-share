@@ -2,7 +2,7 @@
 // SHARE - Envoi position toutes les 3 SECONDES
 // ============================================================
 const BACKEND_URL = 'https://localisation-backend-sm3t.onrender.com';
-const SEND_INTERVAL = 3000; // 3 SECONDES
+const SEND_INTERVAL = 3000;
 
 let sharing = false;
 let intervalId = null;
@@ -20,12 +20,10 @@ function updateStatus(msg, type = '') {
     if (s) { s.textContent = msg; s.className = 'status ' + type; }
 }
 
-// Wake Lock
 async function requestWakeLock() {
     try {
         if ('wakeLock' in navigator) {
             wakeLock = await navigator.wakeLock.request('screen');
-            console.log('✅ Wake Lock ON');
         }
     } catch (e) {}
 }
@@ -62,7 +60,7 @@ function getPosition() {
         if (!navigator.geolocation) { reject(new Error('Non supportée')); return; }
         navigator.geolocation.getCurrentPosition(resolve, reject, {
             enableHighAccuracy: true,
-            timeout: 15000,
+            timeout: 20000,
             maximumAge: 0
         });
     });
@@ -118,7 +116,7 @@ async function toggleSharing() {
         btnText.textContent = 'Arrêter le partage';
         await requestWakeLock();
         await sendPosition();
-        intervalId = setInterval(sendPosition, SEND_INTERVAL); // 3 SECONDES
+        intervalId = setInterval(sendPosition, SEND_INTERVAL);
         pingId = setInterval(() => fetch(BACKEND_URL + '/api/ping').catch(() => {}), 10000);
     } else {
         sharing = false;
