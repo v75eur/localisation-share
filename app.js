@@ -1,6 +1,5 @@
 // ============================================================
 // SHARE - Partage de position GPS
-// Version corrigée avec la bonne URL backend
 // ============================================================
 
 const BACKEND_URL = 'https://localisation-backend-sm3t.onrender.com';
@@ -8,7 +7,6 @@ const BACKEND_URL = 'https://localisation-backend-sm3t.onrender.com';
 let sharing = false;
 let intervalId = null;
 let userId = null;
-let permissionGranted = false;
 let backendAwake = false;
 
 function generateUserId() {
@@ -48,7 +46,7 @@ async function wakeBackend() {
         }
     } catch (e) {
         console.error('Erreur wakeBackend:', e);
-        updateStatus('⚠️ Serveur en cours de réveil. Patientez 30 sec.', '');
+        updateStatus('⚠️ Serveur en réveil. Patientez 30 sec.', '');
         return false;
     }
 }
@@ -82,13 +80,17 @@ async function sendPosition() {
     if (!name) return;
 
     try {
+        updateStatus('📡 Obtention de la position...', '');
         const pos = await getPosition();
+        
+        updateStatus('📤 Envoi au serveur...', '');
         
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 90000);
         
         const response = await fetch(BACKEND_URL + '/api/position', {
             method: 'POST',
+            mode: 'cors',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 user_id: userId,
@@ -102,16 +104,17 @@ async function sendPosition() {
         clearTimeout(timeoutId);
         
         const data = await response.json();
+        
         if (data.status === 'ok') {
-            updateStatus(`✅ Position envoyée (${new Date().toLocaleTimeString()})`, 'active');
+            updateStatus(`✅ Position envoyée (${new Date().toLocaleTimeString()}) — ${data.count} utilisateur(s)`, 'active');
         } else {
-            updateStatus('⚠️ Erreur serveur: ' + (data.error || 'inconnue'), 'error');
+            updateStatus('⚠️ Erreur: ' + (data.error || 'inconnue'), 'error');
         }
     } catch (e) {
         console.error('Erreur sendPosition:', e);
         
         if (e.name === 'AbortError') {
-            updateStatus('⚠️ Timeout. Le serveur est lent.', 'error');
+            updateStatus('⚠️ Timeout. Réessayez.', 'error');
         } else {
             updateStatus('❌ Erreur: ' + e.message, 'error');
         }
@@ -119,7 +122,7 @@ async function sendPosition() {
 }
 
 // ============================================================
-// DÉMARRER / ARRÊTER LE PARTAGE
+// DÉMARRER / ARRÊTER
 // ============================================================
 async function toggleSharing() {
     const name = document.getElementById('name').value.trim();
@@ -127,13 +130,11 @@ async function toggleSharing() {
     const btnText = document.getElementById('btnText');
 
     if (!sharing) {
-        // DÉMARRER
         if (!name) {
             updateStatus('⚠️ Entrez votre prénom', 'error');
             return;
         }
         
-        // Réveiller le backend si nécessaire
         if (!backendAwake) {
             const awake = await wakeBackend();
             if (!awake) {
@@ -147,14 +148,10 @@ async function toggleSharing() {
         btn.classList.add('stop');
         btnText.textContent = 'Arrêter le partage';
         
-        // Envoyer immédiatement
         await sendPosition();
-        
-        // Puis toutes les 3 secondes
         intervalId = setInterval(sendPosition, 3000);
         
     } else {
-        // ARRÊTER
         sharing = false;
         
         if (intervalId) {
@@ -178,11 +175,9 @@ async function toggleSharing() {
 // AU CHARGEMENT
 // ============================================================
 window.addEventListener('load', function() {
-    // Réveiller le backend automatiquement
     wakeBackend();
 });
 
-// Prévenir si on quitte la page
 window.addEventListener('beforeunload', function() {
     if (sharing && userId) {
         navigator.sendBeacon(BACKEND_URL + '/api/position/' + userId);
