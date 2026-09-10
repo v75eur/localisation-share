@@ -1,13 +1,13 @@
 // ============================================================
-// SHARE - Partage de position GPS
+// SHARE - Partage de position avec Screen Wake Lock
 // ============================================================
-
 const BACKEND_URL = 'https://localisation-backend-sm3t.onrender.com';
 
 let sharing = false;
 let intervalId = null;
 let userId = null;
 let backendAwake = false;
+let wakeLock = null;
 
 function generateUserId() {
     return 'user_' + Math.random().toString(36).substring(2, 10);
@@ -20,33 +20,56 @@ function updateStatus(msg, type = '') {
 }
 
 // ============================================================
+// SCREEN WAKE LOCK [citation:1]
+// ============================================================
+async function requestWakeLock() {
+    try {
+        if ('wakeLock' in navigator) {
+            wakeLock = await navigator.wakeLock.request('screen');
+            console.log('✅ Wake Lock activé');
+            
+            // Ré-acquérir si l'onglet redevient visible [citation:1]
+            document.addEventListener('visibilitychange', async () => {
+                if (wakeLock !== null && document.visibilityState === 'visible' && sharing) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                }
+            });
+        }
+    } catch (err) {
+        console.warn('⚠️ Wake Lock non supporté:', err);
+    }
+}
+
+function releaseWakeLock() {
+    if (wakeLock !== null) {
+        wakeLock.release();
+        wakeLock = null;
+        console.log('✅ Wake Lock relâché');
+    }
+}
+
+// ============================================================
 // RÉVEIL DU BACKEND
 // ============================================================
 async function wakeBackend() {
     try {
         updateStatus('🔄 Connexion au serveur...', '');
-        
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 90000);
-        
         const response = await fetch(BACKEND_URL + '/api/ping', {
             signal: controller.signal,
             method: 'GET'
         });
-        
         clearTimeout(timeoutId);
-        
         if (response.ok) {
             backendAwake = true;
             updateStatus('✅ Serveur connecté. Entrez votre prénom.', 'active');
             return true;
-        } else {
-            updateStatus('⚠️ Serveur indisponible. Réessayez.', 'error');
-            return false;
         }
+        updateStatus('⚠️ Serveur indisponible.', 'error');
+        return false;
     } catch (e) {
-        console.error('Erreur wakeBackend:', e);
-        updateStatus('⚠️ Serveur en réveil. Patientez 30 sec.', '');
+        updateStatus('⚠️ Serveur en réveil. Patientez.', '');
         return false;
     }
 }
@@ -60,37 +83,23 @@ function getPosition() {
             reject(new Error('Géolocalisation non supportée'));
             return;
         }
-        navigator.geolocation.getCurrentPosition(
-            resolve,
-            (err) => reject(new Error('Localisation refusée: ' + err.message)),
-            {
-                enableHighAccuracy: true,
-                timeout: 20000,
-                maximumAge: 0
-            }
-        );
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 20000,
+            maximumAge: 0
+        });
     });
 }
 
-// ============================================================
-// ENVOI DE LA POSITION
-// ============================================================
 async function sendPosition() {
     const name = document.getElementById('name').value.trim();
     if (!name) return;
-
     try {
-        updateStatus('📡 Obtention de la position...', '');
         const pos = await getPosition();
-        
-        updateStatus('📤 Envoi au serveur...', '');
-        
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 90000);
-        
         const response = await fetch(BACKEND_URL + '/api/position', {
             method: 'POST',
-            mode: 'cors',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 user_id: userId,
@@ -100,19 +109,12 @@ async function sendPosition() {
             }),
             signal: controller.signal
         });
-        
         clearTimeout(timeoutId);
-        
         const data = await response.json();
-        
         if (data.status === 'ok') {
-            updateStatus(`✅ Position envoyée (${new Date().toLocaleTimeString()}) — ${data.count} utilisateur(s)`, 'active');
-        } else {
-            updateStatus('⚠️ Erreur: ' + (data.error || 'inconnue'), 'error');
+            updateStatus(`✅ Envoyé (${new Date().toLocaleTimeString()})`, 'active');
         }
     } catch (e) {
-        console.error('Erreur sendPosition:', e);
-        
         if (e.name === 'AbortError') {
             updateStatus('⚠️ Timeout. Réessayez.', 'error');
         } else {
@@ -122,7 +124,7 @@ async function sendPosition() {
 }
 
 // ============================================================
-// DÉMARRER / ARRÊTER
+// TOGGLE PARTAGE
 // ============================================================
 async function toggleSharing() {
     const name = document.getElementById('name').value.trim();
@@ -134,11 +136,10 @@ async function toggleSharing() {
             updateStatus('⚠️ Entrez votre prénom', 'error');
             return;
         }
-        
         if (!backendAwake) {
             const awake = await wakeBackend();
             if (!awake) {
-                updateStatus('⚠️ Serveur en réveil. Réessayez dans 30 sec.', 'error');
+                updateStatus('⚠️ Serveur en réveil. Réessayez.', 'error');
                 return;
             }
         }
@@ -148,37 +149,25 @@ async function toggleSharing() {
         btn.classList.add('stop');
         btnText.textContent = 'Arrêter le partage';
         
+        await requestWakeLock(); // Activer le Wake Lock
         await sendPosition();
         intervalId = setInterval(sendPosition, 3000);
-        
     } else {
         sharing = false;
-        
-        if (intervalId) {
-            clearInterval(intervalId);
-            intervalId = null;
-        }
-        
+        if (intervalId) clearInterval(intervalId);
         btn.classList.remove('stop');
         btnText.textContent = 'Partager ma position';
-        
+        releaseWakeLock(); // Désactiver le Wake Lock
         if (userId) {
-            fetch(BACKEND_URL + '/api/position/' + userId, { method: 'DELETE' })
-                .catch(() => {});
+            fetch(BACKEND_URL + '/api/position/' + userId, { method: 'DELETE' }).catch(() => {});
         }
-        
         updateStatus('Partage arrêté');
     }
 }
 
-// ============================================================
-// AU CHARGEMENT
-// ============================================================
-window.addEventListener('load', function() {
-    wakeBackend();
-});
-
-window.addEventListener('beforeunload', function() {
+window.addEventListener('load', () => { wakeBackend(); });
+window.addEventListener('beforeunload', () => {
+    releaseWakeLock();
     if (sharing && userId) {
         navigator.sendBeacon(BACKEND_URL + '/api/position/' + userId);
     }
