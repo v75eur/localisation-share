@@ -1,4 +1,4 @@
-const BACKEND_URL = 'https://localisation-backend.onrender.com';
+const BACKEND_URL = 'https://localisation-backend-sm3t.onrender.com';
 
 let sharing = false;
 let intervalId = null;
