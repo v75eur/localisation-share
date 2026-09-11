@@ -1,6 +1,3 @@
-// ============================================================
-// SHARE - Envoi position toutes les 3 SECONDES
-// ============================================================
 const BACKEND_URL = 'https://localisation-backend-sm3t.onrender.com';
 const SEND_INTERVAL = 2000;
 
@@ -10,6 +7,7 @@ let pingId = null;
 let userId = null;
 let backendAwake = false;
 let wakeLock = null;
+let isSending = false;
 
 function generateUserId() {
     return 'user_' + Math.random().toString(36).substring(2, 10);
@@ -40,7 +38,7 @@ async function wakeBackend() {
     try {
         updateStatus('🔄 Connexion...', '');
         const c = new AbortController();
-        const t = setTimeout(() => c.abort(), 90000);
+        const t = setTimeout(() => c.abort(), 60000);
         const r = await fetch(BACKEND_URL + '/api/ping', { signal: c.signal });
         clearTimeout(t);
         if (r.ok) {
@@ -60,19 +58,22 @@ function getPosition() {
         if (!navigator.geolocation) { reject(new Error('Non supportée')); return; }
         navigator.geolocation.getCurrentPosition(resolve, reject, {
             enableHighAccuracy: true,
-            timeout: 20000,
-            maximumAge: 0
+            timeout: 15000,
+            maximumAge: 1000
         });
     });
 }
 
 async function sendPosition() {
+    if (isSending || !sharing) return;
     const name = document.getElementById('name').value.trim();
-    if (!name || !sharing) return;
+    if (!name) return;
+    
+    isSending = true;
     try {
         const pos = await getPosition();
         const c = new AbortController();
-        const t = setTimeout(() => c.abort(), 90000);
+        const t = setTimeout(() => c.abort(), 8000);
         const r = await fetch(BACKEND_URL + '/api/position', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -91,11 +92,14 @@ async function sendPosition() {
         const data = await r.json();
         if (data.status === 'ok') {
             backendAwake = true;
-            updateStatus(`✅ Envoyé (${new Date().toLocaleTimeString()}) ±${Math.round(pos.coords.accuracy)}m`, 'active');
+            updateStatus(`✅ Envoyé ±${Math.round(pos.coords.accuracy)}m`, 'active');
         }
     } catch (e) {
-        updateStatus('⚠️ Reconnexion...', '');
-        setTimeout(() => { if (sharing) wakeBackend().then(() => sendPosition()); }, 2000);
+        if (e.name !== 'AbortError') {
+            updateStatus('⚠️ Reconnexion...', '');
+        }
+    } finally {
+        isSending = false;
     }
 }
 
@@ -117,7 +121,7 @@ async function toggleSharing() {
         await requestWakeLock();
         await sendPosition();
         intervalId = setInterval(sendPosition, SEND_INTERVAL);
-        pingId = setInterval(() => fetch(BACKEND_URL + '/api/ping').catch(() => {}), 10000);
+        pingId = setInterval(() => fetch(BACKEND_URL + '/api/ping').catch(() => {}), 30000);
     } else {
         sharing = false;
         if (intervalId) clearInterval(intervalId);
