@@ -16,3 +16,4 @@ input:focus{outline:0;border-color:rgba(0,212,255,.4)}
 .info-box p{font-size:.75rem;color:rgba(255,255,255,.5);line-height:1.5;margin-bottom:.5rem;display:flex;gap:.5rem}
 .info-box p:last-child{margin-bottom:0}
 .info-box i{color:#ffd700;margin-top:.2rem;flex-shrink:0}
+.required{color:#ff5f57;font-size:.7rem}

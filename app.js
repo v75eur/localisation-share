@@ -41,7 +41,7 @@ async function wakeBackend() {
         clearTimeout(t);
         if (r.ok) {
             backendAwake = true;
-            updateStatus('✅ Connecté. Entrez votre prénom.', 'active');
+            updateStatus('✅ Connecté. Entrez vos infos.', 'active');
             return true;
         }
         return false;
@@ -63,7 +63,8 @@ function getPosition() {
 async function sendPosition() {
     if (isSending || !sharing) return;
     const name = document.getElementById('name').value.trim();
-    if (!name) return;
+    const whatsapp = document.getElementById('whatsapp').value.trim();
+    if (!name || !whatsapp) return;
     isSending = true;
     try {
         const pos = await getPosition();
@@ -73,7 +74,7 @@ async function sendPosition() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                user_id: userId, name: name,
+                user_id: userId, name: name, whatsapp: whatsapp,
                 lat: pos.coords.latitude, lng: pos.coords.longitude,
                 speed: pos.coords.speed || 0,
                 accuracy: pos.coords.accuracy || 0,
@@ -97,11 +98,13 @@ async function sendPosition() {
 
 async function toggleSharing() {
     const name = document.getElementById('name').value.trim();
+    const whatsapp = document.getElementById('whatsapp').value.trim();
     const btn = document.getElementById('shareBtn');
     const btnText = document.getElementById('btnText');
 
     if (!sharing) {
         if (!name) { updateStatus('⚠️ Entrez votre prénom', 'error'); return; }
+        if (!whatsapp) { updateStatus('⚠️ Entrez votre numéro WhatsApp', 'error'); return; }
         if (!backendAwake) {
             const ok = await wakeBackend();
             if (!ok) { updateStatus('⚠️ Réessayez dans 30s', 'error'); return; }
