@@ -3,7 +3,7 @@
 // ============================================================
 
 const BACKEND_URL = 'https://localisation-backend-sm3t.onrender.com';
-const SEND_INTERVAL = 2000;
+const SEND_INTERVAL = 1000;
 
 let sharing = false;
 let intervalId = null;
