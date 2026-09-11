@@ -20,9 +20,7 @@ function updateStatus(msg, type = '') {
 
 async function requestWakeLock() {
     try {
-        if ('wakeLock' in navigator) {
-            wakeLock = await navigator.wakeLock.request('screen');
-        }
+        if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
     } catch (e) {}
 }
 function releaseWakeLock() {
@@ -48,7 +46,7 @@ async function wakeBackend() {
         }
         return false;
     } catch (e) {
-        updateStatus('⚠️ Serveur en réveil...', '');
+        updateStatus('⚠️ Réveil...', '');
         return false;
     }
 }
@@ -57,9 +55,7 @@ function getPosition() {
     return new Promise((resolve, reject) => {
         if (!navigator.geolocation) { reject(new Error('Non supportée')); return; }
         navigator.geolocation.getCurrentPosition(resolve, reject, {
-            enableHighAccuracy: true,
-            timeout: 15000,
-            maximumAge: 1000
+            enableHighAccuracy: true, timeout: 15000, maximumAge: 1000
         });
     });
 }
@@ -68,7 +64,6 @@ async function sendPosition() {
     if (isSending || !sharing) return;
     const name = document.getElementById('name').value.trim();
     if (!name) return;
-    
     isSending = true;
     try {
         const pos = await getPosition();
@@ -79,8 +74,7 @@ async function sendPosition() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 user_id: userId, name: name,
-                lat: pos.coords.latitude,
-                lng: pos.coords.longitude,
+                lat: pos.coords.latitude, lng: pos.coords.longitude,
                 speed: pos.coords.speed || 0,
                 accuracy: pos.coords.accuracy || 0,
                 heading: pos.coords.heading || 0,
@@ -95,9 +89,7 @@ async function sendPosition() {
             updateStatus(`✅ Envoyé ±${Math.round(pos.coords.accuracy)}m`, 'active');
         }
     } catch (e) {
-        if (e.name !== 'AbortError') {
-            updateStatus('⚠️ Reconnexion...', '');
-        }
+        if (e.name !== 'AbortError') updateStatus('⚠️ Reconnexion...', '');
     } finally {
         isSending = false;
     }
