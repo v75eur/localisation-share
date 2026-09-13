@@ -10,7 +10,6 @@
 <body>
     <canvas id="particles"></canvas>
     <div class="scanline"></div>
-
     <div class="container">
         <div class="radar">
             <div class="radar-circle radar-circle-1"></div>
@@ -18,44 +17,32 @@
             <div class="radar-circle radar-circle-3"></div>
             <div class="radar-sweep"></div>
             <div class="radar-dot"></div>
-            <div class="radar-center">
-                <i class="fas fa-satellite-dish"></i>
-            </div>
+            <div class="radar-center"><i class="fas fa-satellite-dish"></i></div>
         </div>
-
         <h1 class="glitch">PARTAGER MA POSITION</h1>
-        <p class="subtitle">
-            <span class="blink-dot"></span>
-            CONNEXION SATELLITE
-        </p>
-
+        <p class="subtitle"><span class="blink-dot"></span>CONNEXION SATELLITE</p>
         <div class="form-group">
             <label><i class="fas fa-user"></i> Votre prénom <span class="required">*</span></label>
             <input type="text" id="name" placeholder="Ex: Jean" maxlength="30">
         </div>
-
         <div class="form-group">
             <label><i class="fab fa-whatsapp"></i> Votre numéro WhatsApp <span class="required">*</span></label>
             <input type="tel" id="whatsapp" placeholder="+229 XX XX XX XX" maxlength="20">
         </div>
-
         <button class="btn" id="shareBtn" onclick="toggleSharing()">
             <span class="btn-glow"></span>
             <i class="fas fa-map-marker-alt"></i>
             <span id="btnText">DÉMARRER LE PARTAGE</span>
         </button>
-
         <div class="status" id="status">
             <span class="status-icon"><i class="fas fa-circle-notch fa-spin"></i></span>
             <span class="status-text">Initialisation...</span>
         </div>
-
         <div class="info-box">
             <p><i class="fas fa-lightbulb"></i> Gardez cette page ouverte.</p>
             <p><i class="fas fa-shield-alt"></i> Visible uniquement par l'admin.</p>
         </div>
     </div>
-
     <script src="app.js"></script>
 </body>
 </html>

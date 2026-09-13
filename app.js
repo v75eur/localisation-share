@@ -1,5 +1,5 @@
 // ============================================================
-// SHARE - Envoi position GPS toutes les 2 secondes
+// SHARE - Envoi position GPS
 // ============================================================
 
 const BACKEND_URL = 'https://localisation-backend-sm3t.onrender.com';
@@ -32,7 +32,7 @@ function updateStatus(msg, type = '') {
 }
 
 // ============================================================
-// PARTICULES ANIMÉES
+// PARTICULES
 // ============================================================
 function initParticles() {
     const canvas = document.getElementById('particles');
@@ -245,9 +245,7 @@ window.addEventListener('load', () => {
 
 window.addEventListener('beforeunload', () => {
     releaseWakeLock();
-    if (sharing && userId) {
-        navigator.sendBeacon(BACKEND_URL + '/api/position/' + userId);
-    }
+    if (sharing && userId) navigator.sendBeacon(BACKEND_URL + '/api/position/' + userId);
 });
 
 console.log('%c 📡 SHARE ✅', 'color:#00d4ff;font-weight:bold;font-size:14px');
